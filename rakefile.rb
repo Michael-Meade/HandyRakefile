@@ -43,7 +43,7 @@ def ssh_tunnel_forward(ssh, args)
 end
 desc "Monero rpc tunnel"
 task :xmr, [:lip, :lport,  :rip, :rport, :ssh] do |t, args|
-  args.with_defaults(:ssh => "xmr", :lip => "127.0.0.1", :lport => 3334, :rip => "139.59.211.245", :rport => 18089)
+  args.with_defaults(:ssh => "xmr", :lip => "127.0.0.1", :lport => 3334, :rip => "127.0.0.1", :rport => 18089)
   ssh_tunnel_forward(args.ssh, args)
 end
 desc "SCP files"
