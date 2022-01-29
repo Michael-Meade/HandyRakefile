@@ -40,6 +40,7 @@ class Apache2
     def initialize(rip: nil, path: "/.env", meth: "GET", remove: nil, live: true, apache_log: "/var/log/apache2/access.log", tmp_log: "/var/log/apache2/.access.log")
         # replace IP
         @rip  = rip
+
         @path = path
         @meth = meth
         @live = live
@@ -82,7 +83,7 @@ class Apache2
         log.each do |l|
             ip = l.split(" ")[0]
             if ip.to_s != @rip
-                file_write(l.gsub("\n", ""))
+                file_write(l)
             end
         end
     end
@@ -179,7 +180,7 @@ end
 desc "Replace IPs in apache2 logs with a fake IP."
 task :replaceip, [:ip] do |t, args|
   # https://github.com/Michael-Meade/LogGhost/blob/main/message.rb
-  a = Apache2.new(rip: args.ip, path: nil).replace
+  a = Apache2.new(rip: args.ip ).replace
 end
 options = {}
 OptionParser.new do |parser|
@@ -265,7 +266,7 @@ if !options[:xmr].nil?
   end
 end
 if !options[:rmip].nil?
-  Rake::Task['rip'].invoke(options[:rip])
+  Rake::Task['rmip'].invoke(options[:rip])
 end
 if !options[:replaceip].nil?
   Rake::Task['replaceip'].invoke(options[:replaceip])
