@@ -53,3 +53,29 @@ This will perform a UDP scan on the target and create a text file with the detai
 ```ruby
 sudo ruby rakefile.rb --sv 192.168.1.220
 ```
+
+### Example of SSH config file
+```json
+{"cowrie": {
+    "ip": "127.0.0.1",
+    "uname": "root",
+    "pass": "",
+    "port": 22
+},
+"xmr": {
+    "ip": "127.0.0.1",
+    "uname": "root",
+    "pass": "",
+    "keys": "/home/root/.ssh/xmr.pem"
+}}
+```
+The program uses the config.json file so that it can SSH into the remote hosts. 
+
+
+### Installing gems
+```ruby
+gem install spidr
+gem install net-ssh
+gem install net-scp
+gem install rake
+```
