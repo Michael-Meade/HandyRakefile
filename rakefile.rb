@@ -86,6 +86,7 @@ class Apache2
                 file_write(l)
             end
         end
+    cleanup
     end
     def replace
         log.each do |l|
@@ -100,6 +101,7 @@ class Apache2
                 file_write(l)
             end
         end
+    cleanup
     end
 end
 def ssh_tunnel_forward(ssh, args)
