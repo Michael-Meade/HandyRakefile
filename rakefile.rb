@@ -9,6 +9,7 @@ require 'thread'
 require 'timeout'
 require 'fileutils'
 require 'ipaddr'
+require 'net/ping'
 class Config
     def initialize(file: "config.json", ssh: "cowrie")
       @file = file
@@ -150,6 +151,21 @@ def port_scan(host, port)
   rescue Errno::ENETUNREACH, Errno::ECONNREFUSED, Timeout::Error
   end
 end
+def ping_scan(ip_address)
+  arg  = ip_address.split(".").slice(0,3).join(".")
+  x    = 0
+  ips  = []
+  while x <  255  do
+      ip = arg.to_s + "." + x.to_s
+      icmp = Net::Ping::ICMP.new(ip)
+      if !icmp.ping.nil?
+        puts ip
+        ips << ip
+      end
+      x += 1
+  end
+File.open("ping_ips.txt", "w") {|f| f.write(ips.join("\n")) }
+end
 desc "Monero rpc tunnel"
 task :xmr, [:lip, :lport,  :rip, :rport, :ssh] do |t, args|
   args.with_defaults(:ssh => "xmr", :lip => "127.0.0.1", :lport => 3334, :rip => "127.0.0.1", :rport => 18089)
@@ -210,13 +226,19 @@ task :replaceip, [:ip] do |t, args|
   a = Apache2.new(rip: args.ip ).replace
 end
 desc "SSH brute force"
-task :sshbrute [:ip, :found_file, :wl] do |t, args|
+task :sshbrute, [:ip, :found_file, :wl] do |t, args|
   args.with_defaults(:found_file => "found.txt", :wl => "brute.txt")
   b = Brute.new(host: args.ip, word_list: args.wl, found_file: args.found_file).run
 end
+desc "ping scan.. get IPs"
+task :pingscan, [:ip, :fn] do |t, args|
+  args.with_defaults(:fn => "ip_pingscan.txt")
+  ping_scan(args.ip)
+end
 options = {
   "wl": "brute.txt",
-  "ffile": "found.txt"
+  "ffile": "found.txt",
+  "fn": "ips.txt"
 }
 OptionParser.new do |parser|
   parser.on("--clean", "Remove any .txt files in the current directory.") do |a|
@@ -273,6 +295,9 @@ OptionParser.new do |parser|
   parser.on("--ffile [FFILE]", "Where valid logins are stored.") do |b|
     options[:ffile] = b
   end
+  parser.on("--pingscan [PINGSCAN]", "ping scan") do |b|
+    options[:pingscan] = b
+  end
 end.parse!
 if options[:clean]
   Rake::Task['clean'].invoke
@@ -314,4 +339,7 @@ if !options[:replaceip].nil?
 end
 if !options[:sshbrute].nil?
   Rake::Task['sshbrute'].invoke(options[:sshrute], options[:ffile], options[:wl])
+end
+if !options[:pingscan].nil?
+  Rake::Task['sn'].invoke(options[:pingscan], options[:fn])
 end
